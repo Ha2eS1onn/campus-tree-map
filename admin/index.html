@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>侨木志 - 管理面板</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        h1 {
+            color: #1b5e20;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        /* 登录页 */
+        .login-box {
+            max-width: 360px;
+            margin: 100px auto;
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-box h2 {
+            color: #1b5e20;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+
+        .login-input:focus {
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.15);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a,
+        .nav-links button {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            background: white;
+            color: #555;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links button:hover {
+            background: #f1f8e9;
+            border-color: #a5d6a7;
+            color: #2e7d32;
+        }
+
+        .logout-btn {
+            background: #ffebee !important;
+            border-color: #ffcdd2 !important;
+            color: #d32f2f !important;
+        }
+
+        .logout-btn:hover {
+            background: #ffcdd2 !important;
+        }
+
+        /* 统计 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f0f0f0;
+        }
+
+        .stat-num {
+            font-size: 28px;
+            font-weight: 800;
+            color: #2e7d32;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 主布局：左侧地图+搜索 | 右侧卡片网格 */
+        .main-layout {
+            display: flex;
+            gap: 20px;
+            min-height: calc(100vh - 220px);
+        }
+
+        .left-panel {
+            width: 380px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mini-map {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            background: #e8f5e9;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            background: white;
+        }
+
+        .search-box input:focus {
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.12);
+        }
+
+        .right-panel {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 220px);
+        }
+
+        /* 右侧卡片网格 */
+        .tree-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        .tree-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tree-card:hover {
+            border-color: #66bb6a;
+            box-shadow: 0 2px 12px rgba(102, 187, 106, 0.15);
+        }
+
+        .tree-card.active {
+            border-color: #2e7d32;
+            background: #f1f8e9;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .card-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .locate-btn {
+            padding: 4px 10px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        .locate-btn:hover {
+            background: #c8e6c9;
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .card-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .card-images img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .card-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .btn-edit:hover {
+            background: #bbdefb;
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .btn-delete:hover {
+            background: #ffcdd2;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-box h3 {
+            margin-bottom: 16px;
+            color: #1b5e20;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #66bb6a;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .preview-item-small {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        .preview-item-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item-small button {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #bbb;
+        }
+
+        /* 地图标记样式 */
+        .mini-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .main-layout {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .left-panel {
+                width: 100%;
+            }
+
+            .mini-map {
+                height: 250px;
+            }
+
+            .right-panel {
+                max-height: none;
+            }
+
+            .tree-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginPage">
+        <div class="login-box">
+            <h2>🔐 管理员登录</h2>
+            <input type="password" id="adminPass" class="login-input" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')loginAdmin()">
+            <button onclick="loginAdmin()" class="login-btn">进入管理面板</button>
+            <div style="text-align:center;margin-top:16px;">
+                <a href="/" style="color:#888;font-size:13px;text-decoration:none;">← 返回地图</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminPage" style="display:none;">
+        <div class="container">
+            <div class="top-bar">
+                <div>
+                    <h1>🌲 侨木志管理面板</h1>
+                    <div class="subtitle">管理校园树木数据</div>
+                </div>
+                <div class="nav-links">
+                    <a href="/">🗺️ 返回地图</a>
+                    <button onclick="exportCSV()">📥 CSV</button>
+                    <button onclick="exportGeoJSON()">📥 GeoJSON</button>
+                    <button onclick="logoutAdmin()" class="logout-btn">退出登录</button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num" id="totalCount">0</div>
+                    <div class="stat-label">树木总数</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="speciesCount">0</div>
+                    <div class="stat-label">树种数</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="userCount">0</div>
+                    <div class="stat-label">记录者数</div>
+                </div>
+            </div>
+
+            <div class="main-layout">
+                <!-- 左侧：地图 + 搜索 -->
+                <div class="left-panel">
+                    <div id="miniMap" class="mini-map"></div>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="🔍 搜索树种、备注或记录者..." autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- 右侧：卡片网格 -->
+                <div class="right-panel" id="treeList">
+                    <div class="empty-state">
+                        <div style="font-size:32px;margin-bottom:8px;">🌱</div>
+                        <div>加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-box">
+            <h3>✏️ 编辑树木信息</h3>
+            <div class="form-group">
+                <label>树种名称</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <textarea id="editNote" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>追加图片（可选）</label>
+                <input type="file" id="editImages" accept="image/*" multiple style="display:none;">
+                <button type="button" onclick="document.getElementById('editImages').click()" class="btn btn-secondary" style="width:100%;">📸 选择图片</button>
+                <div id="editPreviewContainer" class="preview-grid"></div>
+            </div>
+            <div class="btn-group">
+                <button onclick="saveEdit()" class="btn btn-primary">保存</button>
+                <button onclick="closeEditModal()" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const WORKER_URL = 'https://trees.桦凇.top/api';
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTfEMiobADGZxtGx5dYr_8c7-7-18CTTE",
+            authDomain: "campus-trees-6ce96.firebaseapp.com",
+            databaseURL: "https://campus-trees-6ce96-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "campus-trees-6ce96",
+            storageBucket: "campus-trees-6ce96.firebasestorage.app",
+            messagingSenderId: "9931250349",
+            appId: "1:9931250349:web:50d293545fbe836e934424"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const treesRef = ref(db, 'trees');
+
+        let currentData = {};
+        let editTargetId = null;
+        let selectedFiles = [];
+        let adminToken = localStorage.getItem('adminToken');
+        let miniMap = null;
+        let miniMarkers = {};
+
+        const TREE_COLORS = {
+            '银杏': '#F4D03F', '银杏树': '#F4D03F',
+            '香樟': '#27AE60', '樟树': '#27AE60', '香樟树': '#27AE60',
+            '白千层': '#E74C3C', '枫叶': '#E74C3C',
+            '榕树': '#8E44AD', '小叶榕': '#8E44AD', '大叶榕': '#9B59B6',
+            '桂花': '#F39C12', '桂花树': '#F39C12',
+            '松树': '#1ABC9C', '马尾松': '#1ABC9C',
+            '柏树': '#5D6D7E', '侧柏': '#5D6D7E',
+            '玉兰': '#ECF0F1', '广玉兰': '#ECF0F1',
+            '木棉': '#C0392B', '木棉树': '#C0392B',
+            '荔枝': '#E67E22', '龙眼': '#D35400',
+            '芒果': '#F1C40F', '菠萝蜜': '#27AE60',
+            'default': '#3498DB'
+        };
+
+        function getTreeColor(name) {
+            if (!name) return TREE_COLORS['default'];
+            if (TREE_COLORS[name]) return TREE_COLORS[name];
+            for (let key in TREE_COLORS) if (name.includes(key)) return TREE_COLORS[key];
+            return TREE_COLORS['default'];
+        }
+
+        const SCHOOL_CENTER = [23.670478, 113.068398];
+        const SCHOOL_BOUNDS = [[23.666751, 113.065420], [23.674069, 113.0710]];
+
+        // ---------- 登录相关 ----------
+
+        window.loginAdmin = async function () {
+            const input = document.getElementById('adminPass').value;
+            if (!input) return alert('请输入密码');
+
+            try {
+                const res = await fetch(`${WORKER_URL}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: input })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    return alert(err.error || '登录失败');
+                }
+                const { token } = await res.json();
+                adminToken = token;
+                localStorage.setItem('adminToken', token);
+                showAdminPage();
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        };
+
+        window.logoutAdmin = function () {
+            localStorage.removeItem('adminToken');
+            adminToken = null;
+            location.reload();
+        };
+
+        function showAdminPage() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('adminPage').style.display = 'block';
+            setTimeout(initMiniMap, 100);
+        }
+
+        if (adminToken) showAdminPage();
+
+        // ---------- 小地图 ----------
+
+        function initMiniMap() {
+            if (miniMap) return;
+
+            miniMap = L.map('miniMap', {
+                center: SCHOOL_CENTER,
+                zoom: 17,
+                minZoom: 16,
+                maxZoom: 19,
+                maxBounds: SCHOOL_BOUNDS,
+                maxBoundsViscosity: 1.0
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19
+            }).addTo(miniMap);
+
+            L.rectangle(SCHOOL_BOUNDS, {
+                color: "#43a047",
+                weight: 2,
+                fillColor: "#43a047",
+                fillOpacity: 0.03,
+                dashArray: '6, 6'
+            }).addTo(miniMap);
+
+            if (Object.keys(currentData).length > 0) {
+                updateMiniMap(currentData);
+            }
+        }
+
+        function updateMiniMap(data) {
+            if (!miniMap) return;
+
+            Object.values(miniMarkers).forEach(m => miniMap.removeLayer(m));
+            miniMarkers = {};
+
+            Object.entries(data).forEach(([id, tree]) => {
+                const color = getTreeColor(tree.name);
+                const marker = L.marker([tree.lat, tree.lng], {
+                    icon: L.divIcon({
+                        className: 'mini-marker',
+                        html: `<div style="width:16px;height:16px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    })
+                });
+
+                marker.bindPopup(`
+                    <div style="font-size:13px;">
+                        <b>${tree.name}</b><br>
+                        ${tree.note || '无备注'}<br>
+                        <span style="color:#999;font-size:11px;">${tree.by || '匿名'}</span>
+                    </div>
+                `);
+
+                marker.on('click', () => highlightTreeCard(id));
+                marker.addTo(miniMap);
+                miniMarkers[id] = marker;
+            });
+        }
+
+        function highlightTreeCard(id) {
+            document.querySelectorAll('.tree-card').forEach(c => c.classList.remove('active'));
+            const card = document.querySelector(`.tree-card[data-id="${id}"]`);
+            if (card) {
+                card.classList.add('active');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        window.locateOnMap = function (id) {
+            const marker = miniMarkers[id];
+            if (marker && miniMap) {
+                miniMap.setView(marker.getLatLng(), 18);
+                marker.openPopup();
+                highlightTreeCard(id);
+            }
+        };
+
+        // ---------- 数据监听 ----------
+
+        onValue(treesRef, (snapshot) => {
+            const raw = snapshot.val() || {};
+            const data = {};
+            Object.entries(raw).forEach(([id, tree]) => {
+                if (tree && typeof tree === 'object' && tree.lat && tree.lng && tree.name) {
+                    data[id] = tree;
+                }
+            });
+            currentData = data;
+            renderList(data);
+            updateMiniMap(data);
+        });
+
+        // ---------- 列表渲染 ----------
+
+        function renderList(data) {
+            const trees = Object.entries(data);
+            document.getElementById('totalCount').textContent = trees.length;
+            document.getElementById('speciesCount').textContent = new Set(trees.map(t => t[1].name)).size;
+            document.getElementById('userCount').textContent = new Set(trees.map(t => t[1].by || '匿名')).size;
+
+            const container = document.getElementById('treeList');
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+            let filtered = trees;
+            if (query) {
+                filtered = trees.filter(([id, tree]) => {
+                    return (tree.name || '').toLowerCase().includes(query) ||
+                        (tree.note || '').toLowerCase().includes(query) ||
+                        (tree.by || '').toLowerCase().includes(query);
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px;">🌱</div><div>暂无匹配记录</div></div>`;
+                return;
+            }
+
+            const groups = {};
+            filtered.forEach(([id, tree]) => {
+                if (!groups[tree.name]) groups[tree.name] = [];
+                groups[tree.name].push({ id, ...tree });
+            });
+
+            container.innerHTML = Object.entries(groups).map(([name, items]) => {
+                const color = getTreeColor(name);
+                return items.map(tree => `
+                <div class="tree-card" data-id="${tree.id}" onclick="locateOnMap('${tree.id}')">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-dot" style="background:${color};"></span>
+                            <span class="card-name">${tree.name}</span>
+                        </div>
+                        <button class="locate-btn" onclick="event.stopPropagation();locateOnMap('${tree.id}')">📍 定位</button>
+                    </div>
+                    <div class="card-meta">
+                        📍 ${tree.lat.toFixed(6)}, ${tree.lng.toFixed(6)}<br>
+                        👤 ${tree.by || '匿名'}
+                        ${tree.note ? `<br>📝 ${tree.note}` : ''}
+                        ${tree.editedAt ? `<br>✏️ ${tree.editedBy || '管理员'} 于 ${new Date(tree.editedAt).toLocaleDateString()} 编辑` : ''}
+                    </div>
+                    ${tree.images?.length ? `<div class="card-images">${tree.images.map(url => `<img src="${url}" onclick="event.stopPropagation();window.open('${url}')">`).join('')}</div>` : ''}
+                    <div class="card-actions">
+                        <button class="btn-edit" onclick="event.stopPropagation();startEdit('${tree.id}')">✏️ 编辑</button>
+                        <button class="btn-delete" onclick="event.stopPropagation();deleteTree('${tree.id}')">🗑 删除</button>
+                    </div>
+                </div>`).join('');
+            }).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', () => renderList(currentData));
+
+        // ---------- 编辑相关 ----------
+
+        window.startEdit = function (id) {
+            const tree = currentData[id];
+            if (!tree) return;
+            editTargetId = id;
+            document.getElementById('editName').value = tree.name;
+            document.getElementById('editNote').value = tree.note || '';
+            selectedFiles = [];
+            updateEditPreview();
+            document.getElementById('editModal').classList.add('active');
+        };
+
+        window.closeEditModal = function () {
+            document.getElementById('editModal').classList.remove('active');
+            editTargetId = null;
+            selectedFiles = [];
+        };
+
+        document.getElementById('editImages').addEventListener('change', (e) => {
+            selectedFiles = [...selectedFiles, ...Array.from(e.target.files)];
+            updateEditPreview();
+            e.target.value = '';
+        });
+
+        function updateEditPreview() {
+            document.getElementById('editPreviewContainer').innerHTML = selectedFiles.map((file, index) => `
+                <div class="preview-item-small">
+                    <img src="${URL.createObjectURL(file)}">
+                    <button onclick="removeEditImage(${index})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.removeEditImage = function (index) {
+            selectedFiles.splice(index, 1);
+            updateEditPreview();
+        };
+
+        async function compressImage(file, maxWidth = 1200, quality = 0.8) {
+            if (file.size < 200 * 1024) return file;
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height;
+                        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.toBlob((blob) => {
+                            if (!blob) return reject(new Error('压缩失败'));
+                            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadToGitHub(file) {
+            const compressed = await compressImage(file);
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(compressed);
+            });
+            const response = await fetch(`${WORKER_URL}/upload`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileName: file.name, fileContent: base64 })
+            });
+            const text = await response.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) { throw new Error(`服务器返回非JSON: ${text.substring(0, 100)}`); }
+            if (!response.ok) throw new Error(data.error || `上传失败: ${response.status}`);
+            return data.cdnUrl;
+        }
+
+        window.saveEdit = async function () {
+            if (!editTargetId || !adminToken) return alert('未登录或令牌失效');
+            const name = document.getElementById('editName').value.trim();
+            const note = document.getElementById('editNote').value.trim();
+            if (!name) return alert('请输入树种名称');
+
+            try {
+                let images = [];
+                if (selectedFiles.length > 0) {
+                    for (const file of selectedFiles) {
+                        try { images.push(await uploadToGitHub(file)); }
+                        catch (err) { alert(`图片 ${file.name} 上传失败: ${err.message}`); return; }
+                    }
+                }
+
+                const updates = { name, note, editedAt: Date.now(), editedBy: '管理员' };
+                if (images.length > 0) {
+                    const snapshot = currentData[editTargetId];
+                    updates.images = [...(snapshot.images || []), ...images];
+                }
+
+                const res = await fetch(`${WORKER_URL}/admin/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ treeId: editTargetId, updates })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    if (res.status === 401) { alert('登录已过期，请重新登录'); logoutAdmin(); return; }
+                    throw new Error(err.error);
+                }
+                closeEditModal();
+                alert('编辑成功');
+            } catch (err) {
+                alert('保存失败: ' + err.message);
+            }
+        };
+
+        window.deleteTree = async function (id) {
+            if (!confirm('确定删除此记录？')) return;
+            if (!adminToken) return alert('未登录');
+            const tree = currentData[id];
+            if (!tree) return;
+
+            try {
+                const res = await fetch(`${WORKER_URL}/admin/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ treeId: id, imageUrls: tree.images || [] })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    if (res.status === 401) { alert('登录已过期，请重新登录'); logoutAdmin(); return; }
+                    throw new Error(err.error);
+                }
+            } catch (err) {
+                alert('删除失败: ' + err.message);
+            }
+        };
+
+        // ---------- 导出 ----------
+
+        window.exportCSV = async function () {
+            const snapshot = currentData;
+            const headers = ['ID', '树种名称', '经度', '纬度', '备注', '记录者', '时间'];
+            const rows = Object.entries(snapshot).map(([id, tree]) => [
+                id, tree.name, tree.lng, tree.lat,
+                tree.note || '', tree.by || '匿名',
+                new Date(tree.time).toLocaleString()
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+            const csv = '\ufeff' + [headers.join(','), ...rows].join('\n');
+            downloadFile(csv, 'text/csv;charset=utf-8;', `校园树木数据_${formatDate()}.csv`);
+        };
+
+        window.exportGeoJSON = async function () {
+            const snapshot = currentData;
+            const features = Object.entries(snapshot).map(([id, tree]) => ({
+                type: "Feature",
+                properties: { id, name: tree.name, note: tree.note, by: tree.by, time: tree.time },
+                geometry: { type: "Point", coordinates: [tree.lng, tree.lat] }
+            }));
+            const geojson = { type: "FeatureCollection", features };
+            downloadFile(JSON.stringify(geojson, null, 2), 'application/json', `校园树木数据_${formatDate()}.geojson`);
+        };
+
+        function downloadFile(content, type, filename) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function formatDate() {
+            return new Date().toISOString().slice(0, 10);
+        }
+    </script>
+</body>
+
+</html>

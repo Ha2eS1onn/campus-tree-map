@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>侨木志</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="./libs/leaflet.css" />
+    <script src="./libs/leaflet.js"></script>
+    <!-- MarkerCluster -->
+    <link rel="stylesheet" href="./libs/MarkerCluster.css" />
+    <link rel="stylesheet" href="./libs/MarkerCluster.Default.css" />
+    <script src="./libs/leaflet.markercluster.js"></script>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background: #e8f5e9;
+        }
+
+        .map-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .map-switcher button {
+            width: 120px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            color: #444;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-switcher button.active {
+            background: white;
+            border-color: #2e7d32;
+            color: #2e7d32;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+            font-weight: 600;
+        }
+
+        .map-switcher button:hover {
+            background: white;
+            border-color: #43a047;
+            transform: translateX(2px);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            padding: 16px;
+            width: 220px !important;
+            font-family: inherit;
+        }
+
+        .leaflet-popup-tip {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .leaflet-container a.leaflet-popup-close-button {
+            top: 10px;
+            right: 10px;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: #333;
+        }
+
+        .marker-cluster-custom {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .marker-cluster-custom div {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            border: 3px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.35);
+            transition: transform 0.2s;
+        }
+
+        .marker-cluster-custom:hover div {
+            transform: scale(1.1);
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 320px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(10px);
+            box-shadow: 2px 0 24px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            color: #1b5e20;
+            font-size: 22px;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .school-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #1565c0;
+            line-height: 1.6;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .user-box {
+            background: #f1f8e9;
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #dcedc8;
+        }
+
+        .user-box input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            outline: none;
+            color: #33691e;
+        }
+
+        .user-box input::placeholder {
+            color: #9ccc65;
+        }
+
+        .stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            flex: 1;
+            background: white;
+            padding: 14px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f0f0f0;
+        }
+
+        .stat-num {
+            font-size: 26px;
+            font-weight: 800;
+            color: #2e7d32;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tree-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0 -4px;
+            padding-right: 4px;
+            min-height: 140px;
+        }
+
+        .tree-item {
+            padding: 14px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-left: 4px solid #4caf50;
+            transition: all 0.25s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tree-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.03), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s;
+        }
+
+        .tree-item:hover {
+            transform: translateX(6px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-left-color: #2e7d32;
+        }
+
+        .tree-item:hover::before {
+            transform: translateX(100%);
+        }
+
+        .tree-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tree-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .tree-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .tree-meta {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 6px;
+            padding-left: 18px;
+        }
+
+        .add-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.35);
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 28px rgba(46, 125, 50, 0.45);
+        }
+
+        .add-btn.active {
+            background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+            transform: rotate(45deg);
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.35);
+        }
+
+        .hint {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 3000;
+            transition: all 0.3s;
+        }
+
+        .hint.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 28px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+
+        .modal.active .modal-box {
+            transform: scale(1);
+        }
+
+        .modal-box h3 {
+            margin-bottom: 20px;
+            color: #1b5e20;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-group label .required {
+            color: #e53935;
+            margin-left: 2px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.15);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #eeeeee;
+        }
+
+        .export-wrap {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .export-btn {
+            width: 100%;
+            padding: 10px;
+            background: white;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .export-btn:hover {
+            border-color: #66bb6a;
+            color: #2e7d32;
+            background: #f1f8e9;
+        }
+
+        .export-menu {
+            display: none;
+            margin-top: 8px;
+            gap: 8px;
+        }
+
+        .export-menu.show {
+            display: flex;
+        }
+
+        .export-menu button {
+            flex: 1;
+            padding: 8px;
+            background: #f5f5f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .export-menu button:hover {
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 5000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s;
+        }
+
+        .loading.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e8f5e9;
+            border-top-color: #43a047;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #bbb;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imagePreviewContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        /* 搜索框 */
+        .search-box {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 34px 10px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .search-box input:focus {
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.12);
+        }
+
+        #clearSearch {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: none;
+            background: #e0e0e0;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        #clearSearch:hover {
+            background: #ccc;
+        }
+
+        /* 分类控制栏 */
+        .category-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 0 2px;
+        }
+
+        #groupSummary {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .group-actions button {
+            padding: 4px 10px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .group-actions button:hover {
+            background: #f1f8e9;
+            border-color: #a5d6a7;
+            color: #2e7d32;
+        }
+
+        /* 树种分组卡片 */
+        .species-group {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+            border: 1px solid #f0f0f0;
+        }
+
+        .species-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .species-header:hover {
+            background: #fafafa;
+        }
+
+        .species-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .species-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .species-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .species-count {
+            font-size: 11px;
+            color: #999;
+            margin-left: 6px;
+            font-weight: 500;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .species-arrow {
+            font-size: 12px;
+            color: #bbb;
+            transition: transform 0.25s;
+            margin-left: 8px;
+        }
+
+        .species-group.collapsed .species-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .species-children {
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .species-group.collapsed .species-children {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        /* 搜索高亮 */
+        .tree-item.highlighted {
+            background: #fff8e1;
+            border-left-color: #ffb300;
+        }
+
+        .tree-item.hidden-by-search {
+            display: none;
+        }
+
+        .species-group.hidden-by-search {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: 40%;
+                top: auto;
+                bottom: 0;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+                padding: 14px 16px;
+                overflow-y: auto;
+            }
+
+            .school-info {
+                padding: 8px 10px;
+                margin-bottom: 8px;
+                font-size: 11px;
+            }
+
+            .user-box {
+                padding: 8px 10px;
+                margin-bottom: 8px;
+            }
+
+            .stats {
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+
+            .stat {
+                padding: 10px;
+            }
+
+            .stat-num {
+                font-size: 22px;
+            }
+
+            .search-box {
+                margin-bottom: 6px;
+            }
+
+            .search-box input {
+                padding: 8px 30px 8px 10px;
+                font-size: 13px;
+            }
+
+            .category-controls {
+                margin-bottom: 6px;
+            }
+
+            .section-title {
+                margin-bottom: 6px;
+            }
+
+            .tree-item {
+                padding: 10px;
+                margin-bottom: 6px;
+            }
+
+            .export-wrap {
+                padding-top: 8px;
+            }
+
+            .export-btn {
+                padding: 8px;
+            }
+
+            #map {
+                height: 60%;
+                position: fixed;
+                top: 0;
+            }
+
+            .add-btn {
+                bottom: 43%;
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map">
+        <div class="map-switcher" id="mapSwitcher">
+            <button data-layer="osm" class="active">🗺️ 街道图</button>
+            <button data-layer="carto">📄 浅色图</button>
+            <button data-layer="satellite">🛰️ 卫星图</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2>🌲 校园树木地图</h2>
+        <div class="subtitle">校友协作统计</div>
+
+        <div class="school-info">
+            📍 清远市华侨中学校园区域<br>
+            地图已锁定，仅显示校园范围
+        </div>
+
+        <div class="user-box">
+            <input type="text" id="nickname" placeholder="输入你的昵称（用于标记记录者）" maxlength="10">
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-num" id="totalCount">0</div>
+                <div class="stat-label">树木</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" id="speciesCount">0</div>
+                <div class="stat-label">树种</div>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 搜索树种名称..." autocomplete="off">
+            <button id="clearSearch" style="display:none;">✕</button>
+        </div>
+
+        <div class="category-controls">
+            <span id="groupSummary">共 0 个树种</span>
+            <div class="group-actions">
+                <button onclick="window.expandAllGroups()">展开</button>
+                <button onclick="window.collapseAllGroups()">折叠</button>
+            </div>
+        </div>
+
+        <div class="section-title">
+            <span>树木列表</span>
+            <span style="font-weight:400;color:#bbb;font-size:11px;" id="listCount">0 条记录</span>
+        </div>
+
+        <div class="tree-list" id="treeList">
+            <div class="empty-state">
+                <div style="font-size:32px;margin-bottom:8px;">🌱</div>
+                <div style="font-size:13px;">暂无数据，点击右下角添加</div>
+            </div>
+        </div>
+
+        <div class="export-wrap">
+            <button class="export-btn" id="exportToggle">
+                <span>📥</span> 导出数据
+            </button>
+            <div class="export-menu" id="exportMenu">
+                <button onclick="window.exportCSV()">导出 CSV</button>
+                <button onclick="window.exportGeoJSON()">导出 GeoJSON</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="add-btn" id="addBtn">+</button>
+
+    <div class="hint" id="hint">点击地图位置添加树木</div>
+
+    <div class="modal" id="modal">
+        <div class="modal-box">
+            <h3 id="modalTitle">🌳 标记树木</h3>
+            <div class="form-group">
+                <label>树种名称 <span class="required">*</span></label>
+                <input type="text" id="treeName" placeholder="如：银杏、香樟、榕树">
+            </div>
+            <div class="form-group">
+                <label>备注（可选）</label>
+                <textarea id="treeNote" rows="2" placeholder="位置描述，如：操场东侧第3棵"></textarea>
+            </div>
+            <div class="form-group">
+                <label>树木图片（可选，支持多选）</label>
+                <input type="file" id="treeImages" accept="image/*" multiple style="display:none;">
+                <button type="button" id="selectImageBtn" class="btn btn-secondary" style="width:100%;padding:12px;">📸
+                    选择图片</button>
+                <div id="imagePreviewContainer"></div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="saveBtn">保存</button>
+                <button class="btn btn-secondary" id="cancelBtn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top:16px;color:#666;font-size:14px;">正在加载地图数据...</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, push, remove, get, update, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const WORKER_URL = 'https://trees.桦凇.top/api/upload';
+
+        let selectedFiles = [];
+
+        async function compressImage(file, maxWidth = 1200, quality = 0.8) {
+            if (file.size < 200 * 1024) return file;
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height;
+                        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.toBlob((blob) => {
+                            if (!blob) return reject(new Error('压缩失败'));
+                            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadToGitHub(file) {
+            const compressed = await compressImage(file);
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(compressed);
+            });
+
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileName: file.name, fileContent: base64 })
+            });
+
+            const text = await response.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) {
+                throw new Error(`服务器返回非JSON: ${text.substring(0, 100)}`);
+            }
+            if (!response.ok) throw new Error(data.error || `上传失败: ${response.status}`);
+            return data.cdnUrl;
+        }
+
+        function updateImagePreview() {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}">
+                        <button class="remove" onclick="window.removeImage(${index})">✕</button>
+                    `;
+                    container.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+            document.getElementById('selectImageBtn').textContent =
+                selectedFiles.length > 0 ? `已选择 ${selectedFiles.length} 张图片` : '📸 选择图片';
+        }
+
+        window.removeImage = function (index) {
+            selectedFiles.splice(index, 1);
+            updateImagePreview();
+        };
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTfEMiobADGZxtGx5dYr_8c7-7-18CTTE",
+            authDomain: "campus-trees-6ce96.firebaseapp.com",
+            databaseURL: "https://campus-trees-6ce96-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "campus-trees-6ce96",
+            storageBucket: "campus-trees-6ce96.firebasestorage.app",
+            messagingSenderId: "9931250349",
+            appId: "1:9931250349:web:50d293545fbe836e934424"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const treesRef = ref(db, 'trees');
+
+        let map, markers = {}, clusterGroup, isAddMode = false, tempLatLng = null;
+        let currentData = {}, editTargetId = null;
+        let searchQuery = '';
+        let expandedGroups = new Set();
+
+        const SCHOOL_CENTER = [23.670478, 113.068398];
+        const SCHOOL_BOUNDS = [[23.666751, 113.065420], [23.674069, 113.0710]];
+
+        const TREE_COLORS = {
+            '银杏': '#F4D03F', '银杏树': '#F4D03F',
+            '香樟': '#27AE60', '樟树': '#27AE60', '香樟树': '#27AE60',
+            '白千层': '#E74C3C', '枫叶': '#E74C3C',
+            '榕树': '#8E44AD', '小叶榕': '#8E44AD', '大叶榕': '#9B59B6',
+            '桂花': '#F39C12', '桂花树': '#F39C12',
+            '松树': '#1ABC9C', '马尾松': '#1ABC9C',
+            '柏树': '#5D6D7E', '侧柏': '#5D6D7E',
+            '玉兰': '#ECF0F1', '广玉兰': '#ECF0F1',
+            '木棉': '#C0392B', '木棉树': '#C0392B',
+            '荔枝': '#E67E22', '龙眼': '#D35400',
+            '芒果': '#F1C40F', '菠萝蜜': '#27AE60',
+            'default': '#3498DB'
+        };
+
+        function getTreeColor(name) {
+            if (!name) return TREE_COLORS['default'];
+            if (TREE_COLORS[name]) return TREE_COLORS[name];
+            for (let key in TREE_COLORS) if (name.includes(key)) return TREE_COLORS[key];
+            return TREE_COLORS['default'];
+        }
+
+        const baseLayers = {
+            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            }),
+            carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OSM &copy; CARTO',
+                maxZoom: 20
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri',
+                maxZoom: 19
+            })
+        };
+
+        let currentBaseLayer = null;
+
+        window.switchMapLayer = function (layerKey) {
+            if (!map || !baseLayers[layerKey] || currentBaseLayer === baseLayers[layerKey]) return;
+            if (currentBaseLayer) {
+                map.removeLayer(currentBaseLayer);
+            }
+            currentBaseLayer = baseLayers[layerKey];
+            map.addLayer(currentBaseLayer);
+
+            document.querySelectorAll('#mapSwitcher button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.layer === layerKey);
+            });
+        };
+
+        function initMap() {
+            map = L.map('map', {
+                center: SCHOOL_CENTER,
+                zoom: 17,
+                minZoom: 16,
+                maxZoom: 19,
+                maxBounds: SCHOOL_BOUNDS,
+                maxBoundsViscosity: 1.0,
+            });
+
+            switchMapLayer('osm');
+
+            L.rectangle(SCHOOL_BOUNDS, {
+                color: "#43a047", weight: 2.5, fillColor: "#43a047", fillOpacity: 0.03, dashArray: '6, 6'
+            }).addTo(map);
+
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 55,
+                disableClusteringAtZoom: 18,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                animate: true,
+                animateAddingMarkers: true,
+                iconCreateFunction: (cluster) => L.divIcon({
+                    html: `<div>${cluster.getChildCount()}</div>`,
+                    className: 'marker-cluster-custom',
+                    iconSize: L.point(36, 36)
+                })
+            });
+            map.addLayer(clusterGroup);
+
+            map.on('click', (e) => {
+                if (!isAddMode || !map.getBounds().contains(e.latlng)) return;
+                tempLatLng = e.latlng;
+                document.getElementById('treeName').value = '';
+                document.getElementById('treeNote').value = '';
+                selectedFiles = [];
+                updateImagePreview();
+                document.getElementById('modalTitle').textContent = '🌳 标记树木';
+                editTargetId = null;
+                openModal();
+                toggleAddMode();
+            });
+
+            onValue(treesRef, (snapshot) => {
+                const raw = snapshot.val() || {};
+                const data = {};
+                Object.entries(raw).forEach(([id, tree]) => {
+                    if (tree && typeof tree === 'object' && tree.lat && tree.lng && tree.name) {
+                        data[id] = tree;
+                    }
+                });
+                currentData = data;
+                updateMap(data);
+                updateSidebar(data);
+                document.getElementById('loading')?.classList.add('hide');
+            });
+        }
+
+        function bindSwitcherEvents() {
+            document.querySelectorAll('#mapSwitcher button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const layer = btn.dataset.layer;
+                    window.switchMapLayer(layer);
+                });
+            });
+        }
+
+        function updateMap(data) {
+            Object.keys(markers).forEach(id => {
+                if (!data[id]) { clusterGroup.removeLayer(markers[id]); delete markers[id]; }
+            });
+
+            Object.entries(data).forEach(([id, tree]) => {
+                const color = getTreeColor(tree.name);
+
+                if (markers[id]) {
+                    markers[id].setLatLng([tree.lat, tree.lng]);
+                    markers[id].bindPopup(createPopupContent(tree, color, id), { offset: [0, -8] });
+                } else {
+                    const marker = L.marker([tree.lat, tree.lng], {
+                        icon: L.divIcon({
+                            className: 'tree-marker-icon',
+                            html: `<div style="width:20px;height:20px;background:${color};border-radius:50%;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>`,
+                            iconSize: [20, 20], iconAnchor: [10, 10]
+                        })
+                    });
+
+                    marker.bindPopup(createPopupContent(tree, color, id), { offset: [0, -8] });
+                    clusterGroup.addLayer(marker);
+                    markers[id] = marker;
+                }
+            });
+        }
+
+        function createPopupContent(tree, color, id) {
+            const canModify = hasPermission(tree);
+            const deleteAction = canModify ? `
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <button onclick="window.deleteTree('${id}')" style="flex:1;padding:8px;background:#ff5252;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">🗑 删除</button>
+        </div>
+    ` : '';
+
+            return `
+        <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;box-shadow:0 0 0 2px rgba(0,0,0,0.1);"></span>
+                <h4 style="margin:0;color:#1b5e20;font-size:16px;">${tree.name}</h4>
+            </div>
+            ${tree.images?.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;">
+                ${tree.images.map(url => `<img src="${url}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open('${url}')">`).join('')}
+            </div>` : ''}
+            ${tree.note ? `<p style="margin:0 0 8px;font-size:13px;color:#555;line-height:1.5;">${tree.note}</p>` : ''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0;">
+                <span style="font-size:11px;color:#999;">👤 ${tree.by || '匿名'}</span>
+                <span style="font-size:11px;color:#bbb;">${new Date(tree.time).toLocaleDateString()}</span>
+            </div>
+            ${tree.editedAt ? `<div style="margin-top:6px;font-size:10px;color:#ff9800;">✏️ ${tree.editedBy || '匿名'} 于 ${new Date(tree.editedAt).toLocaleDateString()} 编辑</div>` : ''}
+            ${deleteAction}
+        </div>
+    `;
+        }
+
+        function updateSidebar(data) {
+            const trees = Object.entries(data);
+            document.getElementById('totalCount').textContent = trees.length;
+            document.getElementById('speciesCount').textContent = new Set(trees.map(t => t[1].name)).size;
+            document.getElementById('listCount').textContent = trees.length + ' 条记录';
+
+            const list = document.getElementById('treeList');
+            if (trees.length === 0) {
+                list.innerHTML = `<div class="empty-state"><div style="font-size:32px;margin-bottom:8px;">🌱</div><div style="font-size:13px;">暂无数据，点击右下角添加</div></div>`;
+                document.getElementById('groupSummary').textContent = '共 0 个树种';
+                return;
+            }
+
+            const groups = {};
+            trees.forEach(([id, tree]) => {
+                if (!groups[tree.name]) groups[tree.name] = [];
+                groups[tree.name].push({ id, ...tree });
+            });
+
+            const filteredGroupNames = Object.keys(groups).filter(name => {
+                if (!searchQuery) return true;
+                return name.toLowerCase().includes(searchQuery.toLowerCase());
+            });
+
+            document.getElementById('groupSummary').textContent = `共 ${filteredGroupNames.length} 个树种`;
+
+            list.innerHTML = filteredGroupNames.map(name => {
+                const color = getTreeColor(name);
+                const items = groups[name];
+
+                const actualCollapsed = searchQuery ? false : !expandedGroups.has(name);
+                if (!searchQuery && expandedGroups.size === 0) {
+                    expandedGroups.add(name);
+                }
+
+                const childrenHtml = items.map(tree => {
+                    const noteText = tree.note || '无备注';
+                    const searchHighlight = searchQuery && noteText.toLowerCase().includes(searchQuery.toLowerCase()) ? 'highlighted' : '';
+                    return `
+            <div class="tree-item ${searchHighlight}" data-id="${tree.id}" data-name="${tree.name}">
+                <div class="tree-header">
+                    <span class="tree-dot" style="background:${color};"></span>
+                    <span class="tree-name">${tree.name}</span>
+                </div>
+                <div class="tree-meta">${noteText} · ${tree.by || '匿名'}</div>
+            </div>`;
+                }).join('');
+
+                return `
+        <div class="species-group ${actualCollapsed ? 'collapsed' : ''}" data-species="${name}">
+            <div class="species-header" onclick="window.toggleGroup('${name}')">
+                <div class="species-header-left">
+                    <span class="species-color" style="background:${color};"></span>
+                    <span class="species-title">${name}</span>
+                    <span class="species-count">${items.length}棵</span>
+                </div>
+                <span class="species-arrow">▼</span>
+            </div>
+            <div class="species-children">
+                ${childrenHtml}
+            </div>
+        </div>`;
+            }).join('');
+
+            document.querySelectorAll('.tree-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    const marker = markers[this.dataset.id];
+                    if (marker) {
+                        map.setView(marker.getLatLng(), 18);
+                        setTimeout(() => marker.openPopup(), 300);
+                    }
+                });
+            });
+        }
+
+        function toggleAddMode() {
+            isAddMode = !isAddMode;
+            const btn = document.getElementById('addBtn');
+            const hint = document.getElementById('hint');
+            if (isAddMode) {
+                btn.classList.add('active');
+                hint.classList.add('show');
+                map.getContainer().style.cursor = 'crosshair';
+            } else {
+                btn.classList.remove('active');
+                hint.classList.remove('show');
+                map.getContainer().style.cursor = '';
+            }
+        }
+
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+            setTimeout(() => document.getElementById('treeName').focus(), 100);
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function showHint(text) {
+            const hint = document.getElementById('hint');
+            hint.textContent = text;
+            hint.classList.add('show');
+            setTimeout(() => hint.classList.remove('show'), 2000);
+        }
+
+        async function saveTree() {
+            const name = document.getElementById('treeName').value.trim();
+            const note = document.getElementById('treeNote').value.trim();
+            const by = document.getElementById('nickname').value.trim() || '匿名';
+
+            if (!name) { alert('请输入树种名称'); return; }
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '保存中...';
+
+            try {
+                let images = [];
+                if (selectedFiles.length > 0) {
+                    for (const file of selectedFiles) {
+                        try { images.push(await uploadToGitHub(file)); }
+                        catch (err) {
+                            alert(`图片 ${file.name} 上传失败: ${err.message}`);
+                            saveBtn.disabled = false;
+                            saveBtn.textContent = '保存';
+                            return;
+                        }
+                    }
+                }
+
+                if (editTargetId) {
+                    const updates = { name, note, editedAt: Date.now(), editedBy: by };
+                    if (images.length > 0) {
+                        const snapshot = await get(ref(db, 'trees/' + editTargetId));
+                        const existing = snapshot.val() || {};
+                        updates.images = [...(existing.images || []), ...images];
+                    }
+                    await update(ref(db, 'trees/' + editTargetId), updates);
+                    editTargetId = null;
+                    document.getElementById('modalTitle').textContent = '🌳 标记树木';
+                    showHint('✏️ 编辑成功');
+                } else {
+                    const newRef = push(treesRef);
+                    await set(newRef, {
+                        name, note, by,
+                        lat: tempLatLng.lat,
+                        lng: tempLatLng.lng,
+                        time: Date.now(),
+                        images: images.length > 0 ? images : null
+                    });
+
+                    setTimeout(() => {
+                        const newMarker = markers[newRef.key];
+                        if (newMarker) {
+                            map.setView(newMarker.getLatLng(), 18);
+                            setTimeout(() => newMarker.openPopup(), 300);
+                        }
+                    }, 800);
+
+                    showHint('🌳 标记成功');
+                }
+
+                closeModal();
+                selectedFiles = [];
+                updateImagePreview();
+            } catch (err) {
+                alert('保存失败: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存';
+            }
+        }
+
+        async function deleteTree(id) {
+            if (!confirm('确定删除此记录？')) return;
+            const tree = currentData[id];
+            if (!tree) return;
+
+            if (tree.images && tree.images.length > 0) {
+                for (const url of tree.images) {
+                    try {
+                        const response = await fetch(WORKER_URL, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imageUrl: url })
+                        });
+                        const result = await response.json();
+                        if (!response.ok) console.error('删除图片失败:', url, result.error);
+                    } catch (e) {
+                        console.error('删除图片请求失败:', url, e);
+                    }
+                }
+            }
+            await remove(ref(db, 'trees/' + id));
+        }
+
+        function hasPermission(tree) {
+            const me = document.getElementById('nickname').value.trim() || '匿名';
+            return tree.by === me && (Date.now() - (tree.time || 0)) < 24 * 60 * 60 * 1000;
+        }
+
+        window.startEdit = function (id) {
+            const tree = currentData[id];
+            if (!tree) return;
+            editTargetId = id;
+            document.getElementById('treeName').value = tree.name;
+            document.getElementById('treeNote').value = tree.note || '';
+            document.getElementById('modalTitle').textContent = '✏️ 编辑树木信息';
+            selectedFiles = [];
+            updateImagePreview();
+            openModal();
+            Object.values(markers).forEach(m => m.closePopup());
+        };
+
+        window.exportCSV = async function () {
+            const snapshot = await get(treesRef);
+            const data = snapshot.val() || {};
+            const headers = ['ID', '树种名称', '经度', '纬度', '备注', '记录者', '时间'];
+            const rows = Object.entries(data).map(([id, tree]) => [
+                id, tree.name, tree.lng, tree.lat,
+                tree.note || '', tree.by || '匿名',
+                new Date(tree.time).toLocaleString()
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+            const csv = '\ufeff' + [headers.join(','), ...rows].join('\n');
+            downloadFile(csv, 'text/csv;charset=utf-8;', `校园树木数据_${formatDate()}.csv`);
+        };
+
+        window.exportGeoJSON = async function () {
+            const snapshot = await get(treesRef);
+            const data = snapshot.val() || {};
+            const features = Object.entries(data).map(([id, tree]) => ({
+                type: "Feature",
+                properties: { id, name: tree.name, note: tree.note, by: tree.by, time: tree.time },
+                geometry: { type: "Point", coordinates: [tree.lng, tree.lat] }
+            }));
+            const geojson = { type: "FeatureCollection", features };
+            downloadFile(JSON.stringify(geojson, null, 2), 'application/json', `校园树木数据_${formatDate()}.geojson`);
+        };
+
+        function downloadFile(content, type, filename) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function formatDate() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        document.getElementById('addBtn').addEventListener('click', toggleAddMode);
+        document.getElementById('saveBtn').addEventListener('click', saveTree);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        document.getElementById('exportToggle').addEventListener('click', () => {
+            document.getElementById('exportMenu').classList.toggle('show');
+        });
+
+        document.getElementById('selectImageBtn').addEventListener('click', () => document.getElementById('treeImages').click());
+        document.getElementById('treeImages').addEventListener('change', (e) => {
+            selectedFiles = [...selectedFiles, ...Array.from(e.target.files)];
+            updateImagePreview();
+            e.target.value = '';
+        });
+
+        const saved = localStorage.getItem('treeNickname');
+        if (saved) document.getElementById('nickname').value = saved;
+        document.getElementById('nickname').addEventListener('change', (e) => {
+            localStorage.setItem('treeNickname', e.target.value);
+        });
+
+        window.deleteTree = deleteTree;
+
+        window.toggleGroup = function (speciesName) {
+            const groupEl = document.querySelector(`.species-group[data-species="${speciesName}"]`);
+            if (!groupEl) return;
+            const isCollapsed = groupEl.classList.toggle('collapsed');
+            if (isCollapsed) {
+                expandedGroups.delete(speciesName);
+            } else {
+                expandedGroups.add(speciesName);
+            }
+        };
+
+        window.expandAllGroups = function () {
+            document.querySelectorAll('.species-group').forEach(el => {
+                el.classList.remove('collapsed');
+                expandedGroups.add(el.dataset.species);
+            });
+        };
+
+        window.collapseAllGroups = function () {
+            document.querySelectorAll('.species-group').forEach(el => {
+                el.classList.add('collapsed');
+                expandedGroups.delete(el.dataset.species);
+            });
+        };
+
+        function initSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearch');
+
+            input.addEventListener('input', (e) => {
+                searchQuery = e.target.value.trim();
+                clearBtn.style.display = searchQuery ? 'flex' : 'none';
+                updateSidebar(currentData);
+                filterMapMarkers();
+            });
+
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                searchQuery = '';
+                clearBtn.style.display = 'none';
+                updateSidebar(currentData);
+                filterMapMarkers();
+            });
+        }
+
+        function filterMapMarkers() {
+            if (!searchQuery) {
+                Object.entries(markers).forEach(([id, marker]) => {
+                    if (!clusterGroup.hasLayer(marker)) clusterGroup.addLayer(marker);
+                });
+                return;
+            }
+            Object.entries(markers).forEach(([id, marker]) => {
+                const tree = currentData[id];
+                if (tree && tree.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+                    if (!clusterGroup.hasLayer(marker)) clusterGroup.addLayer(marker);
+                } else {
+                    if (clusterGroup.hasLayer(marker)) clusterGroup.removeLayer(marker);
+                }
+            });
+        }
+
+        initMap();
+        bindSwitcherEvents();
+        initSearch();
+    </script>
+</body>
+
+</html>

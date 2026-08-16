@@ -1,0 +1,8 @@
+/杂项/
+/deploy.ps1
+
+# 宣传海报(约 2.5MB,已作为 Release 资产发布)
+/poster.png
+
+# Cloudflare Wrangler 缓存
+/.wrangler/
