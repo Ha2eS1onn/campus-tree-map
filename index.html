@@ -945,6 +945,11 @@
                 <label>树种名称 <span class="required">*</span></label>
                 <input type="text" id="treeName" placeholder="如：银杏、香樟、榕树">
             </div>
+            <div class="form-group" id="countGroup">
+                <label>添加数量 <span class="required">*</span></label>
+                <input type="number" id="treeCount" min="1" max="100" value="1">
+                <div style="font-size:11px;color:#999;margin-top:6px;">同一位置有多棵相同树种时，填写数量可一次添加多棵</div>
+            </div>
             <div class="form-group">
                 <label>备注（可选）</label>
                 <textarea id="treeNote" rows="2" placeholder="位置描述，如：操场东侧第3棵"></textarea>
@@ -1160,6 +1165,8 @@
                 tempLatLng = e.latlng;
                 document.getElementById('treeName').value = '';
                 document.getElementById('treeNote').value = '';
+                document.getElementById('treeCount').value = 1;
+                document.getElementById('countGroup').style.display = '';
                 selectedFiles = [];
                 updateImagePreview();
                 document.getElementById('modalTitle').textContent = '🌳 标记树木';
@@ -1197,12 +1204,19 @@
                 if (!data[id]) { clusterGroup.removeLayer(markers[id]); delete markers[id]; }
             });
 
+            const locationCounts = {};
+            Object.values(data).forEach(t => {
+                const key = t.lat + ',' + t.lng;
+                locationCounts[key] = (locationCounts[key] || 0) + 1;
+            });
+
             Object.entries(data).forEach(([id, tree]) => {
                 const color = getTreeColor(tree.name);
+                const count = locationCounts[tree.lat + ',' + tree.lng] || 1;
 
                 if (markers[id]) {
                     markers[id].setLatLng([tree.lat, tree.lng]);
-                    markers[id].bindPopup(createPopupContent(tree, color, id), { offset: [0, -8] });
+                    markers[id].bindPopup(createPopupContent(tree, color, id, count), { offset: [0, -8] });
                 } else {
                     const marker = L.marker([tree.lat, tree.lng], {
                         icon: L.divIcon({
@@ -1212,14 +1226,14 @@
                         })
                     });
 
-                    marker.bindPopup(createPopupContent(tree, color, id), { offset: [0, -8] });
+                    marker.bindPopup(createPopupContent(tree, color, id, count), { offset: [0, -8] });
                     clusterGroup.addLayer(marker);
                     markers[id] = marker;
                 }
             });
         }
 
-        function createPopupContent(tree, color, id) {
+        function createPopupContent(tree, color, id, count) {
             const canModify = hasPermission(tree);
             const deleteAction = canModify ? `
         <div style="display:flex;gap:8px;margin-top:12px;">
@@ -1227,8 +1241,14 @@
         </div>
     ` : '';
 
+            const countBadge = count > 1 ? `
+        <div style="background:#e8f5e9;border-radius:8px;padding:6px 10px;margin-bottom:10px;font-size:12px;color:#2e7d32;font-weight:600;text-align:center;">
+            🌳 该位置共 ${count} 棵树
+        </div>` : '';
+
             return `
         <div>
+            ${countBadge}
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                 <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;box-shadow:0 0 0 2px rgba(0,0,0,0.1);"></span>
                 <h4 style="margin:0;color:#1b5e20;font-size:16px;">${tree.name}</h4>
@@ -1360,6 +1380,15 @@
 
             if (!name) { alert('请输入树种名称'); return; }
 
+            let count = 1;
+            if (!editTargetId) {
+                const raw = document.getElementById('treeCount').value.trim();
+                const parsed = Number(raw);
+                if (!raw || !Number.isInteger(parsed) || parsed < 1) { alert('请输入有效的添加数量（≥1）'); return; }
+                if (parsed > 100) { alert('添加数量不能超过 100，可分多次添加'); return; }
+                count = parsed;
+            }
+
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = true;
             saveBtn.textContent = '保存中...';
@@ -1390,24 +1419,34 @@
                     document.getElementById('modalTitle').textContent = '🌳 标记树木';
                     showHint('✏️ 编辑成功');
                 } else {
-                    const newRef = push(treesRef);
-                    await set(newRef, {
+                    const treeData = {
                         name, note, by,
                         lat: tempLatLng.lat,
                         lng: tempLatLng.lng,
                         time: Date.now(),
                         images: images.length > 0 ? images : null
-                    });
+                    };
+
+                    let firstKey;
+                    if (count === 1) {
+                        const newRef = push(treesRef);
+                        firstKey = newRef.key;
+                        await set(newRef, treeData);
+                    } else {
+                        const keys = Array.from({ length: count }, () => push(treesRef).key);
+                        firstKey = keys[0];
+                        await update(treesRef, Object.fromEntries(keys.map(k => [k, treeData])));
+                    }
 
                     setTimeout(() => {
-                        const newMarker = markers[newRef.key];
+                        const newMarker = markers[firstKey];
                         if (newMarker) {
                             map.setView(newMarker.getLatLng(), 18);
                             setTimeout(() => newMarker.openPopup(), 300);
                         }
                     }, 800);
 
-                    showHint('🌳 标记成功');
+                    showHint('🌳 已添加 ' + count + ' 棵树');
                 }
 
                 closeModal();
@@ -1455,6 +1494,7 @@
             editTargetId = id;
             document.getElementById('treeName').value = tree.name;
             document.getElementById('treeNote').value = tree.note || '';
+            document.getElementById('countGroup').style.display = 'none';
             document.getElementById('modalTitle').textContent = '✏️ 编辑树木信息';
             selectedFiles = [];
             updateImagePreview();
