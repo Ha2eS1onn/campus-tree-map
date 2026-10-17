@@ -4,7 +4,7 @@
 
 一个基于 **Leaflet** 的校园树木地图应用,支持校友协作添加树木标记、上传照片、按树种分组浏览与检索,并可将数据导出为 CSV / GeoJSON。
 
-> 🏠 线上地址:<https://trees.桦凇.top> ｜ 📦 源码仓库:<https://github.com/Ha2eS1onn/campus-tree-map>
+> 🏠 线上地址:<https://tree.kasho.fun> ｜ 📦 源码仓库:<https://github.com/Ha2eS1onn/campus-tree-map>
 
 ## ✨ 功能特性
 
@@ -37,10 +37,10 @@
 ├── index.html          # 主页面(地图 + 侧边栏 + 标记/编辑/导出)
 ├── admin/
 │   └── index.html      # 管理面板(登录、编辑、删除、导出)
-├── _worker.js          # Cloudflare Worker API(JWT 签发、图片上传/删除)
+├── _worker.js          # Cloudflare Worker API(JWT 签发/校验、图片上传/删除、管理接口)
 ├── libs/               # 本地 Leaflet 与 MarkerCluster 静态资源
 ├── favicon.ico         # 站点图标
-├── deploy.ps1          # Cloudflare Pages 部署脚本(本地使用)
+├── deploy.ps1          # Cloudflare Pages 部署脚本(本地使用,只上传站点必需文件)
 └── 杂项/                # 宣传海报设计源文件
 ```
 
@@ -81,9 +81,10 @@ npx serve .
 
 ```powershell
 # 使用项目自带脚本(需已安装 wrangler 并登录)
+# 脚本只上传站点必需文件,deploy.ps1 / .gitignore / poster.png / 杂项/ 不会被公开
 .\deploy.ps1
 
-# 或手动执行
+# 或手动执行(注意:会把根目录下的本地文件一并上传,仅调试时使用)
 wrangler pages deploy . --project-name=trees --branch=production
 ```
 
@@ -95,11 +96,14 @@ wrangler pages deploy . --project-name=trees --branch=production
 | --- | --- |
 | `JWT_SECRET` | 管理员登录 JWT 签名密钥(必填) |
 | `ADMIN_PASSWORD` | 管理员登录密码(必填) |
-| `GITHUB_TOKEN` | GitHub 个人访问令牌,用于图片上传(必填) |
+| `GITHUB_TOKEN` | GitHub 个人访问令牌,用于图片上传/删除(必填) |
+| `FIREBASE_DB_URL` | 可选,覆盖默认的 Firebase Realtime Database 地址(一般不用设) |
 
 ## 📡 API 文档
 
-Worker 基地址:`https://<your-domain>/api`
+Worker 基地址:`https://tree.kasho.fun/api`
+
+> 管理接口需携带 `Authorization: Bearer <token>`,令牌由 `POST /api/auth` 签发,有效期 7 天。
 
 ### `POST /api/auth`
 
@@ -130,6 +134,28 @@ Worker 基地址:`https://<your-domain>/api`
 ```json
 // 请求
 { "imageUrl": "https://cdn.jsdelivr.net/gh/..." }
+```
+
+### `POST /api/admin/update`
+
+管理员更新树木记录(需 `Authorization: Bearer <token>`)。
+
+```json
+// 请求
+{ "treeId": "-Njx...", "updates": { "name": "银杏", "note": "操场东侧第 3 棵" } }
+// 响应
+{ "success": true }
+```
+
+### `POST /api/admin/delete`
+
+管理员删除树木记录及其图片(需 `Authorization: Bearer <token>`)。图片删除失败只会记入 `warnings`,不阻断记录删除。
+
+```json
+// 请求
+{ "treeId": "-Njx...", "imageUrls": ["https://cdn.jsdelivr.net/gh/..."] }
+// 响应
+{ "success": true, "warnings": [] }
 ```
 
 ## 🗃️ 数据格式
